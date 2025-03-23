@@ -70,8 +70,6 @@ namespace GameHub.Utils
 				public const string OldImages = FSUtils.Paths.Cache.Home + "/images";
 				public const string Graphics = FSUtils.Paths.Cache.Home + "/graphics";
 
-				public const string Database = FSUtils.Paths.Config.Home + "/gamehub.db";
-
 				public const string Compat = FSUtils.Paths.Cache.Home + "/compat";
 				public const string WineWrap = FSUtils.Paths.Cache.Compat + "/winewrap";
 
@@ -89,6 +87,7 @@ namespace GameHub.Utils
 
 			public class Config
 			{
+				public const string Database = FSUtils.Paths.Config.Home + "/gamehub.db";
 				public const string Home = "~/.config/" + ProjectConfig.PROJECT_NAME;
 				public const string Tweaks = FSUtils.Paths.Config.Home + "/tweaks";
 				public const string DOSBoxConfigs = FSUtils.Paths.Config.Home + "/compat/dosbox";
