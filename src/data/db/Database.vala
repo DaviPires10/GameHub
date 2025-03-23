@@ -40,7 +40,7 @@ namespace GameHub.Data.DB
 		{
 			instance = this;
 
-			var path = FSUtils.expand(FSUtils.Paths.Config.Database);
+			var path = FSUtils.expand(FSUtils.Paths.Cache.Database);
 
 			var db_file = File.new_for_path(path);
 			var db_backup = db_file.get_parent().get_child(db_file.get_basename() + ".old");
@@ -52,7 +52,7 @@ namespace GameHub.Data.DB
 
 				if(err)
 				{
-					error("[Database] Can't recreate database. Remove '%s' manually and make sure GameHub can write into config directory", path);
+					error("[Database] Can't recreate database. Remove '%s' manually and make sure GameHub can write into cache directory", path);
 				}
 
 				err = true;
