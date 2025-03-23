@@ -143,18 +143,9 @@ namespace GameHub.Data.Compat
 
 		public override File get_default_wineprefix(Runnable runnable)
 		{
-			var install_dir = runnable.install_dir ?? runnable.default_install_dir;
 
-			var prefix = FSUtils.mkdir(install_dir.get_path(), @"$(FSUtils.GAMEHUB_DIR)/$(FSUtils.COMPAT_DATA_DIR)/$(id)/pfx");
-			var dosdevices = prefix.get_child("dosdevices");
+			return FSUtils.mkdir("~/.proton/pfx");
 
-			if(FSUtils.file(install_dir.get_path(), @"$(FSUtils.GAMEHUB_DIR)/$(id)").query_exists())
-			{
-				Utils.run({"bash", "-c", @"mv -f $(FSUtils.GAMEHUB_DIR)/$(id) $(FSUtils.GAMEHUB_DIR)/$(FSUtils.COMPAT_DATA_DIR)/$(id)"}).dir(install_dir.get_path()).run_sync();
-				FSUtils.rm(dosdevices.get_child("d:").get_path());
-			}
-
-			return prefix;
 		}
 
 		public override File get_wineprefix(Runnable runnable)
