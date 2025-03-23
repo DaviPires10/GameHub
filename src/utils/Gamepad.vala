@@ -72,8 +72,8 @@ namespace GameHub.Utils.Gamepad
 		BTN_A = b(0x130, "A", null, { Key.Return });
 		BTN_B = b(0x131, "B", null, { Key.Escape });
 		BTN_C = b(0x132, "C");
-		BTN_X = b(0x133, "X", null, { Key.Menu });
-		BTN_Y = b(0x134, "Y", null, { Key.Alt_L, Key.F });
+		BTN_X = b(0x133, "X", null, { Key.Alt_L, Key.F });
+		BTN_Y = b(0x134, "Y", null, { Key.Menu });
 		BTN_Z = b(0x135, "Z");
 
 		BUMPER_LEFT  = b(0x136, "LB", "Left Bumper", { Key.F1 });
@@ -82,8 +82,8 @@ namespace GameHub.Utils.Gamepad
 		TRIGGER_LEFT  = b(0x138, "LT", "Left Trigger", { Key.Shift_L, Key.Tab });
 		TRIGGER_RIGHT = b(0x139, "RT", "Right Trigger", { Key.Tab });
 
-		BTN_SELECT = b(0x13a, "Select", null, { Key.F5 });
-		BTN_START  = b(0x13b, "Start", null, { Key.F6 });
+		BTN_START  = b(0x13b, "Start", null, { Key.F5 });
+		BTN_SELECT = b(0x13a, "Select", null, { Key.F6 });
 		BTN_GUIDE  = b(0x13c, "Guide", null, { Key.Shift_L });
 
 		STICK_LEFT  = b(0x13d, "LS", "Left Stick");
