@@ -20,7 +20,6 @@ using Gtk;
 using Gdk;
 using Gee;
 
-
 using GameHub.Data;
 using GameHub.Data.DB;
 
@@ -95,8 +94,8 @@ namespace GameHub.UI.Widgets
 				return true;
 			});
 
-			add_events(EventMask.KEY_RELEASE_MASK);
-			key_release_event.connect(e => {
+			add_events(EventMask.KEY_PRESS_MASK);
+			key_press_event.connect(e => {
 				switch(((EventKey) e).keyval)
 				{
 					case Key.Return:

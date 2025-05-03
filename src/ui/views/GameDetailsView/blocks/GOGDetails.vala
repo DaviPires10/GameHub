@@ -307,7 +307,7 @@ namespace GameHub.UI.Views.GameDetailsView.Blocks
 				bonus.status_change(bonus.status);
 
 				content.add_events(EventMask.ALL_EVENTS_MASK);
-				content.button_release_event.connect(e => {
+				content.button_press_event.connect(e => {
 					if(e.button == 1)
 					{
 						if(bonus.status.state == GOGGame.BonusContent.State.NOT_DOWNLOADED || (bonus.status.state == GOGGame.BonusContent.State.DOWNLOADED && (bonus.downloaded_file == null || !bonus.downloaded_file.query_exists())))
@@ -356,8 +356,8 @@ namespace GameHub.UI.Views.GameDetailsView.Blocks
 				status_icon.opacity = dlc.is_installable ? 1 : 0.6;
 				status_icon.halign = Align.END;
 
-				ebox.add_events(EventMask.BUTTON_RELEASE_MASK);
-				ebox.button_release_event.connect(e => {
+				ebox.add_events(EventMask.BUTTON_PRESS_MASK);
+				ebox.button_press_event.connect(e => {
 					switch(e.button)
 					{
 						case 1:

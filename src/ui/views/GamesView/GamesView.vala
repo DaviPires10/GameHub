@@ -95,15 +95,19 @@ namespace GameHub.UI.Views.GamesView
 		public const string ACTION_SELECT_RANDOM_GAME = "select-random-game";
 		public const string ACTION_ADD_GAME           = "add-game";
 		public const string ACTION_EXIT               = "exit";
+		public const string ACTION_DETAILS            = "details";
+		public const string ACTION_SETTINGS           = "settings";
 
 		public const string ACCEL_SOURCE_PREV         = "F1"; // LB
 		public const string ACCEL_SOURCE_NEXT         = "F2"; // RB
 		public const string ACCEL_SEARCH              = "<Control>F";
-		public const string ACCEL_FILTERS             = "<Alt>F";
+		public const string ACCEL_FILTERS             = "F3";
 		public const string ACCEL_DOWNLOADS           = "<Control>D";
 		public const string ACCEL_SELECT_RANDOM_GAME  = "<Control>R";
 		public const string ACCEL_ADD_GAME            = "<Control>N";
-		public const string ACCEL_EXIT                = "<Shift>Escape"; // Guide + Escape
+		public const string ACCEL_EXIT                = "<Control>Q";
+		public const string ACCEL_DETAILS             = "<Control>E";
+		public const string ACCEL_SETTINGS            = "<Control>S";
 
 		private const GLib.ActionEntry[] action_entries = {
 			{ ACTION_SOURCE_PREV,        window_action_handler },
@@ -113,7 +117,9 @@ namespace GameHub.UI.Views.GamesView
 			{ ACTION_DOWNLOADS,          window_action_handler },
 			{ ACTION_SELECT_RANDOM_GAME, window_action_handler },
 			{ ACTION_ADD_GAME,           window_action_handler },
-			{ ACTION_EXIT,               window_action_handler }
+			{ ACTION_EXIT,               window_action_handler },
+			{ ACTION_DETAILS,            window_action_handler },
+			{ ACTION_SETTINGS,           Application.action_settings }
 		};
 
 		construct
@@ -227,9 +233,9 @@ namespace GameHub.UI.Views.GamesView
 
 			settings = new Button();
 			settings.valign = Align.CENTER;
-			Utils.set_accel_tooltip(settings, _("Settings"), Application.ACCEL_SETTINGS);
+			Utils.set_accel_tooltip(settings, _("Settings"), ACCEL_SETTINGS);
 			settings.image = new Image.from_icon_name("open-menu" + Settings.UI.Appearance.symbolic_icon_suffix, Settings.UI.Appearance.headerbar_icon_size);
-			settings.action_name = Application.ACTION_PREFIX + Application.ACTION_SETTINGS;
+			settings.action_name = ACTION_PREFIX + ACTION_SETTINGS;
 
 			games_adapter = new GamesAdapter();
 			games_adapter.cache_loaded.connect(update_view);
@@ -239,6 +245,23 @@ namespace GameHub.UI.Views.GamesView
 				games_adapter.filter_search_query = search.text;
 				games_adapter.invalidate(true, false, true);
 				update_view();
+			});
+			search.key_release_event.connect(e => {
+				switch(((EventKey) e).keyval)
+				{
+					case Key.Escape:
+						foreach(var selected_game in get_selected_games())
+						{
+							if (selected_game != null)
+							{
+								selected_game.grab_focus();
+								break;
+							}
+						}
+	                    if(view.selected == 1) games_list.select(1, true);
+	                    else games_grid.select(1, true);
+						break;
+				}
 			});
 			search.activate.connect(search_run_first_matching_game);
 
@@ -299,10 +322,6 @@ namespace GameHub.UI.Views.GamesView
 
 			titlebar.pack_start(filters);
 
-			#if MANETTE
-			titlebar.pack_start(gamepad_image("y"));
-			#endif
-
 			var settings_overlay = new Overlay();
 			settings_overlay.add(settings);
 
@@ -326,6 +345,7 @@ namespace GameHub.UI.Views.GamesView
 			gamepad_mode_visible_widgets.add(gamepad_shortcuts_separator);
 			titlebar.pack_end(gamepad_shortcuts_separator);
 			titlebar.pack_end(gamepad_image("x", _("Menu")));
+			titlebar.pack_end(gamepad_image("y", _("Details")));
 			titlebar.pack_end(gamepad_image("b", _("Back")));
 			titlebar.pack_end(gamepad_image("a", _("Select")));
 			#endif
@@ -393,7 +413,7 @@ namespace GameHub.UI.Views.GamesView
 			gamepad_mode_hidden_widgets.add(view);
 			gamepad_mode_hidden_widgets.add(downloads);
 			gamepad_mode_hidden_widgets.add(search);
-			gamepad_mode_hidden_widgets.add(add_game_button);
+			//  gamepad_mode_hidden_widgets.add(add_game_button);
 
 			if(controller_settings.enabled)
 			{
@@ -429,7 +449,8 @@ namespace GameHub.UI.Views.GamesView
 			Application.instance.set_accels_for_action(ACTION_PREFIX + ACTION_SELECT_RANDOM_GAME,               { ACCEL_SELECT_RANDOM_GAME });
 			Application.instance.set_accels_for_action(ACTION_PREFIX + ACTION_ADD_GAME,                         { ACCEL_ADD_GAME });
 			Application.instance.set_accels_for_action(ACTION_PREFIX + ACTION_EXIT,                             { ACCEL_EXIT });
-			Application.instance.set_accels_for_action(Application.ACTION_PREFIX + Application.ACTION_SETTINGS, { "F5" }); // Select
+			Application.instance.set_accels_for_action(ACTION_PREFIX + ACTION_DETAILS,                          { ACCEL_DETAILS });
+			Application.instance.set_accels_for_action(ACTION_PREFIX + ACTION_SETTINGS,                         { ACCEL_SETTINGS });
 		}
 
 		private void window_action_handler(SimpleAction action, Variant? args)
@@ -460,9 +481,16 @@ namespace GameHub.UI.Views.GamesView
 					break;
 
 				case ACTION_SELECT_RANDOM_GAME:
-					int index = Random.int_range(0, (int32) games_grid.get_children().length());
-					games_grid.select(index, view.selected == 0);
-					games_list.select(index, view.selected == 1);
+					if(view.selected == 1)
+					{
+						int index = Random.int_range(0, (int32) games_list.get_children().length());
+						games_list.select(index, true);
+					}
+					else
+					{
+						int index = Random.int_range(0, (int32) games_grid.get_children().length());
+						games_grid.select(index, true);
+					}
 					break;
 
 				case ACTION_ADD_GAME:
@@ -470,10 +498,17 @@ namespace GameHub.UI.Views.GamesView
 					break;
 
 				case ACTION_EXIT:
-					#if MANETTE
-					Gamepad.reset();
-					#endif
 					window.destroy();
+					break;
+
+				case ACTION_DETAILS:
+					GLib.List<unowned Widget>? selected_games = get_selected_games();
+					if (selected_games != null)
+					foreach (var selected_game in selected_games)
+					{
+						if (view.selected == 1) new Dialogs.GameDetailsDialog((selected_game as GameListRow).game).show_all();
+						else new Dialogs.GameDetailsDialog((selected_game as GameCard).game).show_all();
+					}
 					break;
 			}
 		}
@@ -526,6 +561,20 @@ namespace GameHub.UI.Views.GamesView
 			}
 		}
 
+		private GLib.List<unowned Widget>? get_selected_games()
+		{
+			if(view.selected == 1)
+			{
+				GLib.List<unowned ListBoxRow> rows = games_list.get_selected_rows();
+				if(!rows.is_empty()) return rows;
+			}
+			else
+			{
+				GLib.List<unowned FlowBoxChild> cards = games_grid.get_selected_children();
+				if(!cards.is_empty()) return cards;
+			}
+			return null;
+		}
 		private void update_view()
 		{
 			show_games();
@@ -844,7 +893,6 @@ namespace GameHub.UI.Views.GamesView
 			debug("[Gamepad] '%s' connected", device.get_name());
 
 			device.button_press_event.connect(on_gamepad_button_press_event);
-			device.button_release_event.connect(on_gamepad_button_release_event);
 			device.absolute_axis_event.connect(on_gamepad_absolute_axis_event);
 			connected_gamepads.add(device);
 			gamepad_axes_to_keys_thread();
@@ -862,31 +910,21 @@ namespace GameHub.UI.Views.GamesView
 		{
 			uint16 btn;
 			if(!e.get_button(out btn)) return;
-			on_gamepad_button(btn, true);
+			on_gamepad_button(btn);
 		}
 
-		private void on_gamepad_button_release_event(Manette.Event e)
-		{
-			uint16 btn;
-			if(!e.get_button(out btn)) return;
-			on_gamepad_button(btn, false);
-		}
-
-		private void on_gamepad_button(uint16 btn, bool press)
+		private void on_gamepad_button(uint16 btn)
 		{
 			if(Gamepad.Buttons.has_key(btn))
 			{
 				var b = Gamepad.Buttons.get(btn);
-				b.emit_key_event(press);
+				b.emit_key_event();
 
-				if(GameHub.Application.log_verbose && !Runnable.IsLaunched && !Sources.Steam.Steam.IsAnyAppRunning)
-				{
-					debug("[Gamepad] Button %s: %s (%s) [%d]", (press ? "pressed" : "released"), b.name, b.long_name, btn);
-				}
+				debug("[Gamepad] Button %s: %s [%d]", b.name, b.long_name, btn);
 
 				ui_update_gamepad_mode();
 
-				if(controller_settings.focus_window && !press && b == Gamepad.BTN_GUIDE && !window.has_focus && !Runnable.IsLaunched && !Sources.Steam.Steam.IsAnyAppRunning)
+				if(controller_settings.focus_window && b == Gamepad.BTN_GUIDE && !window.has_focus && !Runnable.IsLaunched && !Sources.Steam.Steam.IsAnyAppRunning)
 				{
 					window.get_window().focus(Gdk.CURRENT_TIME);
 				}
@@ -919,7 +957,6 @@ namespace GameHub.UI.Views.GamesView
 					Thread.usleep(Gamepad.KEY_EVENT_EMIT_INTERVAL);
 					ui_update_gamepad_mode();
 				}
-				Gamepad.reset();
 				gamepad_axes_to_keys_thread_running = false;
 			});
 		}

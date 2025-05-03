@@ -21,28 +21,21 @@ using Gee;
 
 namespace GameHub.Utils.Gamepad
 {
-	public const int KEY_EVENT_EMIT_INTERVAL = 50000;
-	public const int KEY_UP_EMIT_TIMEOUT = 50000;
+	public const int KEY_EVENT_EMIT_INTERVAL = 150000;
+	public const int KEY_UP_EMIT_TIMEOUT = 150000;
 
 	public static HashMap<uint16, Button> Buttons;
 	public static HashMap<uint16, Axis> Axes;
+	public static HashMap<uint, uint16> Keycodes;
 	public static bool ButtonPressed = false;
 
 	public static Button BTN_A;
 	public static Button BTN_B;
-	public static Button BTN_C;
 	public static Button BTN_X;
 	public static Button BTN_Y;
-	public static Button BTN_Z;
 
 	public static Button BUMPER_LEFT;
 	public static Button BUMPER_RIGHT;
-
-	public static Button TRIGGER_LEFT;
-	public static Button TRIGGER_RIGHT;
-
-	public static Button STICK_LEFT;
-	public static Button STICK_RIGHT;
 
 	public static Button BTN_SELECT;
 	public static Button BTN_START;
@@ -53,12 +46,6 @@ namespace GameHub.Utils.Gamepad
 	public static Button DPAD_LEFT;
 	public static Button DPAD_RIGHT;
 
-	public static Button SC_PAD_TAP_LEFT;
-	public static Button SC_PAD_TAP_RIGHT;
-
-	public static Button SC_GRIP_LEFT;
-	public static Button SC_GRIP_RIGHT;
-
 	public static Axis AXIS_LS_X;
 	public static Axis AXIS_LS_Y;
 	public static Axis AXIS_RS_X;
@@ -68,47 +55,50 @@ namespace GameHub.Utils.Gamepad
 	{
 		Buttons = new HashMap<uint16, Button>();
 		Axes = new HashMap<uint16, Axis>();
+		Keycodes = new HashMap<uint, uint16>();
+
+		Keycodes[Key.Up] = 0x6f;
+		Keycodes[Key.Down] = 0x74;
+		Keycodes[Key.Left] = 0x71;
+		Keycodes[Key.Right] = 0x72;
+
+		Keycodes[Key.Return] = 0x24;
+		Keycodes[Key.Escape] = 0x9;
+		Keycodes[Key.Menu] = 0x87;
+		Keycodes[Key.Tab] = 0x17;
+
+		Keycodes[Key.F1] = 0x43;
+		Keycodes[Key.F2] = 0x44;
+
+		Keycodes[Key.N] = 0x39;
+		Keycodes[Key.S] = 0x27;
+		Keycodes[Key.Q] = 0x18;
+		Keycodes[Key.E] = 0x1a;
 
 		BTN_A = b(0x130, "A", null, { Key.Return });
 		BTN_B = b(0x131, "B", null, { Key.Escape });
-		BTN_C = b(0x132, "C");
-		BTN_X = b(0x133, "X", null, { Key.Alt_L, Key.F });
-		BTN_Y = b(0x134, "Y", null, { Key.Menu });
-		BTN_Z = b(0x135, "Z");
+		BTN_Y = b(0x133, "Y", null, { Key.E }, ModifierType.CONTROL_MASK);
+		BTN_X = b(0x134, "X", null, { Key.Menu });
 
 		BUMPER_LEFT  = b(0x136, "LB", "Left Bumper", { Key.F1 });
 		BUMPER_RIGHT = b(0x137, "RB", "Right Bumper", { Key.F2 });
 
-		TRIGGER_LEFT  = b(0x138, "LT", "Left Trigger", { Key.Shift_L, Key.Tab });
-		TRIGGER_RIGHT = b(0x139, "RT", "Right Trigger", { Key.Tab });
-
-		BTN_START  = b(0x13b, "Start", null, { Key.F5 });
-		BTN_SELECT = b(0x13a, "Select", null, { Key.F6 });
-		BTN_GUIDE  = b(0x13c, "Guide", null, { Key.Shift_L });
-
-		STICK_LEFT  = b(0x13d, "LS", "Left Stick");
-		STICK_RIGHT = b(0x13e, "RS", "Right Stick");
+		BTN_SELECT = b(0x13a, "Select", null, { Key.N }, ModifierType.CONTROL_MASK);
+		BTN_START  = b(0x13b, "Start", null, { Key.S }, ModifierType.CONTROL_MASK);
+		BTN_GUIDE  = b(0x13c, "Guide", null, {Key.Q}, ModifierType.CONTROL_MASK);
 
 		DPAD_UP    = b(0x220, "Up", "D-Pad Up", { Key.Up });
 		DPAD_DOWN  = b(0x221, "Down", "D-Pad Down", { Key.Down });
 		DPAD_LEFT  = b(0x222, "Left", "D-Pad Left", { Key.Left });
 		DPAD_RIGHT = b(0x223, "Right", "D-Pad Right", { Key.Right });
 
-		SC_PAD_TAP_LEFT  = b(0x121, "L", "Left Trackpad Touch");
-		SC_PAD_TAP_RIGHT = b(0x122, "R", "Right Trackpad Touch");
-
-		SC_GRIP_LEFT  = b(0x150, "LG", "Left Grip");
-		SC_GRIP_RIGHT = b(0x151, "RG", "Right Grip");
-
 		AXIS_LS_X = a(0x0, "LS X", "Left Stick X", Key.Left, Key.Right);
 		AXIS_LS_Y = a(0x1, "LS Y", "Left Stick Y", Key.Up, Key.Down);
-		AXIS_RS_X = a(0x2, "RS X", "Right Stick X");
-		AXIS_RS_Y = a(0x3, "RS Y", "Right Stick Y");
 	}
 
-	private static Button b(uint16 code, string name, string? long_name=null, uint[] keys={})
+	private static Button b(uint16 code, string name, string? long_name=null, uint[] keys={}, ModifierType? mod=null)
 	{
-		var btn = new Button(code, name, long_name, keys);
+		var btn = new Button(code, name, long_name, keys, mod);
 		Buttons.set(code, btn);
 		return btn;
 	}
@@ -126,29 +116,20 @@ namespace GameHub.Utils.Gamepad
 		public string name { get; construct; }
 		public string long_name { get; construct; }
 		public uint[] keys;
+		public ModifierType? mod;
 
-		private bool pressed = false;
-
-		public Button(uint16 code, string name, string? long_name=null, uint[] keys={})
+		public Button(uint16 code, string name, string? long_name=null, uint[] keys={}, ModifierType? mod=null)
 		{
 			Object(code: code, name: name, long_name: long_name ?? name);
 			this.keys = keys;
+			this.mod = mod;
 		}
 
-		public void emit_key_event(bool press)
+		public void emit_key_event()
 		{
 			foreach(var key in keys)
 			{
-				Gamepad.emit_key_event(key, press);
-			}
-			pressed = press;
-		}
-
-		public void reset()
-		{
-			if(pressed)
-			{
-				emit_key_event(false);
+				Gamepad.emit_key_event(key, mod);
 			}
 		}
 	}
@@ -177,7 +158,7 @@ namespace GameHub.Utils.Gamepad
 			}
 			set
 			{
-				int sign = value < -key_threshold ? -1 : (value > key_threshold ? 1 : 0);
+				int sign = value < - key_threshold ? -1 : (value > key_threshold ? 1 : 0);
 				_sign_changed = _value_sign == sign;
 				_value_sign = sign;
 				_value = value;
@@ -197,8 +178,9 @@ namespace GameHub.Utils.Gamepad
 			timer.elapsed(out last_update);
 			if(_value_sign == 0 && last_update >= Gamepad.KEY_UP_EMIT_TIMEOUT)
 			{
-				if(_pressed_sign < 0) Gamepad.emit_key_event(negative_key, false);
-				if(_pressed_sign > 0) Gamepad.emit_key_event(positive_key, false);
+				if(_pressed_sign < 0) Gamepad.emit_key_event(negative_key);
+				if(_pressed_sign > 0) Gamepad.emit_key_event(positive_key);
+
 				timer.stop();
 				_value = 0;
 				_value_sign = 0;
@@ -211,59 +193,54 @@ namespace GameHub.Utils.Gamepad
 
 			if(_value_sign < 0)
 			{
-				Gamepad.emit_key_event(positive_key, false);
-				Gamepad.emit_key_event(negative_key, true);
+				Gamepad.emit_key_event(positive_key);
+				Gamepad.emit_key_event(negative_key);
 				_pressed_sign = -1;
 			}
 			else if(_value_sign > 0)
 			{
-				Gamepad.emit_key_event(negative_key, false);
-				Gamepad.emit_key_event(positive_key, true);
+				Gamepad.emit_key_event(negative_key);
+				Gamepad.emit_key_event(positive_key);
 				_pressed_sign = 1;
 			}
 			else
 			{
-				if(_pressed_sign < 0) Gamepad.emit_key_event(negative_key, false);
-				if(_pressed_sign > 0) Gamepad.emit_key_event(positive_key, false);
+				if(_pressed_sign < 0) Gamepad.emit_key_event(negative_key);
+				if(_pressed_sign > 0) Gamepad.emit_key_event(positive_key);
 				_pressed_sign = 0;
 			}
 
 			_sign_changed = false;
 			timer.start();
 		}
-
-		public void reset()
-		{
-			value = 0;
-			emit_key_event();
-		}
 	}
 
-	public static void reset()
+	private static void emit_key_event(uint keyval, ModifierType? mod=null)
 	{
-		foreach(var button in Gamepad.Buttons.values)
-		{
-			button.reset();
-		}
-		foreach(var axis in Gamepad.Axes.values)
-		{
-			axis.reset();
-		}
-	}
+		if(keyval == 0) return;
 
-	// hack, but works (on X11)
-	private static void emit_key_event(uint key_code, bool press)
-	{
-		if(key_code == 0) return;
 		foreach(var wnd in Gtk.Window.list_toplevels())
+		if(wnd.is_active)
 		{
-			if(wnd.is_active)
-			{
-				unowned X.Display xdisplay = (wnd.screen.get_display() as Gdk.X11.Display).get_xdisplay();
-				XTest.fake_key_event(xdisplay, xdisplay.keysym_to_keycode((ulong) key_code), press, X.CURRENT_TIME);
-				Gamepad.ButtonPressed = true;
-				break;
-			}
+			Display display = wnd.get_display();
+			Seat seat = display.get_default_seat();
+			Device keyboard = seat.get_keyboard();
+			EventKey event = new Event(EventType.KEY_PRESS).key;
+
+
+			if (mod != null)
+			event.state = mod;
+			event.keyval = keyval;
+			event.hardware_keycode = Keycodes[keyval];
+			event.set_device(keyboard);
+			event.time = CURRENT_TIME;
+			event.window = wnd.get_window();
+
+			debug("Keyval: %u", keyval);
+			debug("Keycode: %u", Keycodes.get(keyval));
+
+			Gamepad.ButtonPressed = true;
+			break;
 		}
 	}
 }

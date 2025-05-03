@@ -211,7 +211,7 @@ namespace GameHub.UI.Views.GamesView.Grid
 				grab_focus();
 				return true;
 			});
-			key_release_event.connect(e => {
+			key_press_event.connect(e => {
 				switch(((EventKey) e).keyval)
 				{
 					case Key.Return:

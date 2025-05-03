@@ -75,7 +75,7 @@ namespace GameHub.UI.Views
 
 			settings = new Button();
 			settings.valign = Align.CENTER;
-			Utils.set_accel_tooltip(settings, _("Settings"), Application.ACCEL_SETTINGS);
+			Utils.set_accel_tooltip(settings, _("Settings"), GamesView.GamesView.ACCEL_SETTINGS);
 			settings.image = new Image.from_icon_name("open-menu" + Settings.UI.Appearance.symbolic_icon_suffix, Settings.UI.Appearance.headerbar_icon_size);
 			settings.action_name = Application.ACTION_PREFIX + Application.ACTION_SETTINGS;
 

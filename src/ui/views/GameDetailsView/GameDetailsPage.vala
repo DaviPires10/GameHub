@@ -296,10 +296,16 @@ namespace GameHub.UI.Views.GameDetailsView
 			}
 			action_install.visible = s.state != Game.State.INSTALLED;
 			action_install.sensitive = s.state == Game.State.UNINSTALLED && game.is_installable;
+			if (action_install.visible) action_install.grab_focus();
+
 			action_run_with_compat.visible = s.state == Game.State.INSTALLED && game.use_compat;
 			action_run_with_compat.sensitive = game.can_be_launched();
+			if (action_run_with_compat.visible) action_run_with_compat.grab_focus();
+
 			action_run.visible = s.state == Game.State.INSTALLED && !action_run_with_compat.visible;
 			action_run.sensitive = game.can_be_launched();
+			if (action_run.visible) action_run.grab_focus();
+
 			action_open_directory.visible = s.state == Game.State.INSTALLED && game.install_dir != null && game.install_dir.query_exists();
 			action_open_installer_collection_directory.visible = game.installers_dir != null && game.installers_dir.query_exists();
 			action_open_bonus_collection_directory.visible = game is GameHub.Data.Sources.GOG.GOGGame && (game as GameHub.Data.Sources.GOG.GOGGame).bonus_content_dir != null && (game as GameHub.Data.Sources.GOG.GOGGame).bonus_content_dir.query_exists();
