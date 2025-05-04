@@ -73,8 +73,6 @@ namespace GameHub
 		public const string ACTION_GAME_DETAILS                    = "game.details";
 		public const string ACTION_GAME_PROPERTIES                 = "game.properties";
 
-		public const string ACCEL_SETTINGS                         = "<Control>S";
-
 		private const GLib.ActionEntry[] action_entries = {
 			{ ACTION_SETTINGS,                        action_settings },
 			{ ACTION_ABOUT,                           action_about },
@@ -125,7 +123,6 @@ namespace GameHub
 			flags = ApplicationFlags.HANDLES_COMMAND_LINE;
 			instance = this;
 			add_action_entries(action_entries, this);
-			set_accels_for_action(ACTION_PREFIX + ACTION_SETTINGS, { ACCEL_SETTINGS });
 		}
 
 		private const string[] THEME_SPECIFIC_STYLES = { "elementary" };
@@ -225,10 +222,6 @@ namespace GameHub
 
 		public static int main(string[] args)
 		{
-			#if MANETTE
-			X.init_threads();
-			#endif
-
 			var app = new Application();
 
 			Utils.Logger.init();
@@ -454,7 +447,7 @@ namespace GameHub
 			}
 		}
 
-		private static void action_settings(SimpleAction action, Variant? args)
+		public static void action_settings(SimpleAction action, Variant? args)
 		{
 			new GameHub.UI.Dialogs.SettingsDialog.SettingsDialog();
 		}
