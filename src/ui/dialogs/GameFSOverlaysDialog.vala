@@ -59,6 +59,7 @@ namespace GameHub.UI.Dialogs
 			get_style_context().add_class(Gtk.STYLE_CLASS_FLAT);
 
 			gravity = Gdk.Gravity.NORTH;
+			modal = true;
 
 			stack = new Stack();
 			stack.transition_type = StackTransitionType.CROSSFADE;
