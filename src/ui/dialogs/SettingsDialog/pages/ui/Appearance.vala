@@ -84,6 +84,9 @@ namespace GameHub.UI.Dialogs.SettingsDialog.Pages.UI
 			tab_grid.add(Styled.H4Label(_("Game card")));
 
 			add_checkbox(_("Show platform icons"), settings.grid_platform_icons, v => { settings.grid_platform_icons = v; }, tab_grid);
+			add_checkbox(_("Show titles"), settings.grid_titles, v => { settings.grid_titles = v; }, tab_grid);
+			add_checkbox(_("Show status"), settings.grid_status, v => { settings.grid_status = v; }, tab_grid);
+
 
 			var grid_size_separator = new Separator(Orientation.HORIZONTAL);
 			grid_size_separator.margin_top = grid_size_separator.margin_bottom = 4;

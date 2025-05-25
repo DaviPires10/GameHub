@@ -230,6 +230,12 @@ namespace GameHub.UI.Views.GamesView.Grid
 			Settings.UI.Appearance.instance.notify["grid-platform-icons"].connect(update_grid_icons);
 			update_grid_icons();
 
+			Settings.UI.Appearance.instance.notify["grid-titles"].connect(update_titles);
+			update_titles();
+
+			Settings.UI.Appearance.instance.notify["grid-status"].connect(update_status_labels);
+			update_status_labels();
+
 			Settings.UI.Appearance.instance.notify["grid-card-width"].connect(update_image_constraints);
 			Settings.UI.Appearance.instance.notify["grid-card-height"].connect(update_image_constraints);
 			update_image_constraints();
@@ -466,6 +472,22 @@ namespace GameHub.UI.Views.GamesView.Grid
 		{
 			Idle.add(() => {
 				src_icons.visible = platform_icons.visible = Settings.UI.Appearance.instance.grid_platform_icons;
+				return Source.REMOVE;
+			}, Priority.LOW);
+		}
+
+		private void update_titles()
+		{
+			Idle.add(() => {
+				label.visible = Settings.UI.Appearance.instance.grid_titles;
+				return Source.REMOVE;
+			}, Priority.LOW);
+		}
+
+		private void update_status_labels()
+		{
+			Idle.add(() => {
+				status_label.visible = Settings.UI.Appearance.instance.grid_status;
 				return Source.REMOVE;
 			}, Priority.LOW);
 		}

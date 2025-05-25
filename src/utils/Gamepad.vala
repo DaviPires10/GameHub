@@ -222,25 +222,26 @@ namespace GameHub.Utils.Gamepad
 		foreach(var wnd in Gtk.Window.list_toplevels())
 		if(wnd.is_active)
 		{
-			if (keyval == Key.Escape && (wnd as Gtk.ApplicationWindow).get_id() == 0)
-			{
-				wnd.destroy();
-				return;
-			}
-
 			Display display = Display.get_default();
 			Seat seat = display.get_default_seat();
 			Device keyboard = seat.get_keyboard();
 			EventKey event = new Event(EventType.KEY_PRESS).key;
 
 			if (mod != null)
-
 			event.state = mod;
+
 			event.keyval = keyval;
 			event.hardware_keycode = Keycodes[keyval];
 			event.set_device(keyboard);
 			event.time = CURRENT_TIME;
-			event.window = wnd.get_window();
+
+			foreach (var window in wnd.get_screen().get_toplevel_windows())
+			if (window.is_visible())
+			{
+				event.window = window;
+				break;
+			}
+
 			event.put();
 
 			debug("Keyval: %u", keyval);

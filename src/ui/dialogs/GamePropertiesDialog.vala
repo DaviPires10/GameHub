@@ -46,7 +46,7 @@ namespace GameHub.UI.Dialogs
 
 		public GamePropertiesDialog(Game? game)
 		{
-			Object(transient_for: Windows.MainWindow.instance, resizable: false, title: _("%s: Properties").printf(game.name), game: game);
+			Object(transient_for: Windows.MainWindow.instance, resizable: true, title: _("%s: Properties").printf(game.name), game: game);
 		}
 
 		construct
@@ -55,6 +55,7 @@ namespace GameHub.UI.Dialogs
 			get_style_context().add_class(Gtk.STYLE_CLASS_FLAT);
 
 			gravity = Gdk.Gravity.NORTH;
+			modal = true;
 
 			content = new Box(Orientation.HORIZONTAL, 8);
 			content.margin_start = content.margin_end = 6;

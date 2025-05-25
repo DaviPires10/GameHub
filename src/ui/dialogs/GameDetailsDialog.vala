@@ -39,6 +39,7 @@ namespace GameHub.UI.Dialogs
 			get_style_context().add_class(Gtk.STYLE_CLASS_FLAT);
 
 			gravity = Gdk.Gravity.CENTER;
+			modal = true;
 
 			var content = get_content_area();
 			content.set_size_request(560, -1);

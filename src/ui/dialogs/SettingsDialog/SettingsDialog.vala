@@ -37,7 +37,7 @@ namespace GameHub.UI.Dialogs.SettingsDialog
 
 		public SettingsDialog(string page="ui/appearance")
 		{
-			Object(transient_for: Windows.MainWindow.instance, resizable: false, title: _("Settings"));
+			Object(transient_for: Windows.MainWindow.instance, resizable: true, title: _("Settings"));
 			default_page = page;
 		}
 
@@ -76,7 +76,7 @@ namespace GameHub.UI.Dialogs.SettingsDialog
 			update_messages();
 
 			pages = new Stack();
-			pages.homogeneous = false;
+			pages.homogeneous = true;
 			pages.interpolate_size = true;
 
 			add_page("ui/appearance", new Pages.UI.Appearance(this));
