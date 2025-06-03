@@ -27,7 +27,8 @@ namespace GameHub.Utils.Gamepad
 	public static HashMap<uint16, Button> Buttons;
 	public static HashMap<uint16, Axis> Axes;
 	public static HashMap<uint, uint16> Keycodes;
-	public static bool ButtonPressed = false;
+	public static bool IsButtonPressed = false;
+	public static GLib.List<uint16> ButtonsPressed;
 
 	public static Button BTN_A;
 	public static Button BTN_B;
@@ -56,6 +57,7 @@ namespace GameHub.Utils.Gamepad
 		Buttons = new HashMap<uint16, Button>();
 		Axes = new HashMap<uint16, Axis>();
 		Keycodes = new HashMap<uint, uint16>();
+		ButtonsPressed = new GLib.List<uint16>();
 
 		Keycodes[Key.Up] = 0x6f;
 		Keycodes[Key.Down] = 0x74;
@@ -85,7 +87,7 @@ namespace GameHub.Utils.Gamepad
 
 		BTN_SELECT = b(0x13a, "Select", null, { Key.N }, ModifierType.CONTROL_MASK);
 		BTN_START  = b(0x13b, "Start", null, { Key.S }, ModifierType.CONTROL_MASK);
-		BTN_GUIDE  = b(0x13c, "Guide", null, {Key.Q}, ModifierType.CONTROL_MASK);
+		BTN_GUIDE  = b(0x13c, "Guide", null, {Key.Q});
 
 		DPAD_UP    = b(0x220, "Up", "D-Pad Up", { Key.Up });
 		DPAD_DOWN  = b(0x221, "Down", "D-Pad Down", { Key.Down });
@@ -219,6 +221,12 @@ namespace GameHub.Utils.Gamepad
 	{
 		if(keyval == 0) return;
 
+		if(0x13c == ButtonsPressed.nth_data(0) && keyval == Key.Escape)
+		{
+			keyval = Key.Q;
+			mod = ModifierType.CONTROL_MASK;
+		}
+
 		foreach(var wnd in Gtk.Window.list_toplevels())
 		if(wnd.is_active)
 		{
@@ -227,16 +235,15 @@ namespace GameHub.Utils.Gamepad
 			Device keyboard = seat.get_keyboard();
 			EventKey event = new Event(EventType.KEY_PRESS).key;
 
-			if (mod != null)
+			if(mod != null)
 			event.state = mod;
-
 			event.keyval = keyval;
 			event.hardware_keycode = Keycodes[keyval];
 			event.set_device(keyboard);
 			event.time = CURRENT_TIME;
 
-			foreach (var window in wnd.get_screen().get_toplevel_windows())
-			if (window.is_visible())
+			foreach(var window in wnd.get_screen().get_toplevel_windows())
+			if(window.is_visible())
 			{
 				event.window = window;
 				break;
@@ -247,7 +254,7 @@ namespace GameHub.Utils.Gamepad
 			debug("Keyval: %u", keyval);
 			debug("Keycode: %u", Keycodes.get(keyval));
 
-			Gamepad.ButtonPressed = true;
+			Gamepad.IsButtonPressed = true;
 			break;
 		}
 	}

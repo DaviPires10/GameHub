@@ -859,7 +859,7 @@ namespace GameHub.UI.Views.GamesView
 		private void ui_update_gamepad_mode()
 		{
 			Idle.add(() => {
-				var is_gamepad_connected = connected_gamepads.size > 0 && Gamepad.ButtonPressed;
+				var is_gamepad_connected = connected_gamepads.size > 0 && Gamepad.IsButtonPressed;
 				var widgets_to_show = is_gamepad_connected ? gamepad_mode_visible_widgets : gamepad_mode_hidden_widgets;
 				var widgets_to_hide = is_gamepad_connected ? gamepad_mode_hidden_widgets : gamepad_mode_visible_widgets;
 				foreach(var w in widgets_to_show) w.show();
@@ -893,6 +893,7 @@ namespace GameHub.UI.Views.GamesView
 			debug("[Gamepad] '%s' connected", device.get_name());
 
 			device.button_press_event.connect(on_gamepad_button_press_event);
+			device.button_release_event.connect(on_gamepad_button_release_event);
 			device.absolute_axis_event.connect(on_gamepad_absolute_axis_event);
 			connected_gamepads.add(device);
 			gamepad_axes_to_keys_thread();
@@ -910,8 +911,19 @@ namespace GameHub.UI.Views.GamesView
 		{
 			uint16 btn;
 			if(!e.get_button(out btn)) return;
+			Gamepad.ButtonsPressed.append(btn);
 			on_gamepad_button(btn);
+			//  Gamepad.
 		}
+
+		private void on_gamepad_button_release_event(Manette.Device device, Manette.Event e)
+		{
+			uint16 btn;
+			if(!e.get_button(out btn)) return;
+			Gamepad.ButtonsPressed.remove(btn);
+		}
+
+
 
 		private void on_gamepad_button(uint16 btn)
 		{
@@ -924,7 +936,7 @@ namespace GameHub.UI.Views.GamesView
 
 				ui_update_gamepad_mode();
 
-				if(controller_settings.focus_window && b == Gamepad.BTN_GUIDE && !window.has_focus && !Runnable.IsLaunched && !Sources.Steam.Steam.IsAnyAppRunning)
+				if(controller_settings.focus_window && !window.has_focus && !Runnable.IsLaunched && !Sources.Steam.Steam.IsAnyAppRunning)
 				{
 					window.get_window().focus(Gdk.CURRENT_TIME);
 				}
