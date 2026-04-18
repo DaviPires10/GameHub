@@ -18,7 +18,6 @@ along with GameHub.  If not, see <https://www.gnu.org/licenses/>.
 
 using GLib;
 using Gee;
-using Soup;
 
 namespace GameHub.Utils
 {

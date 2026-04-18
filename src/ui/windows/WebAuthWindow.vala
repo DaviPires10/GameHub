@@ -18,7 +18,6 @@ along with GameHub.  If not, see <https://www.gnu.org/licenses/>.
 
 using Gtk;
 using GLib;
-using Soup;
 using GameHub.Utils;
 
 #if WEBKIT2GTK
@@ -101,12 +100,13 @@ namespace GameHub.UI.Windows
 							{
 								if(GameHub.Application.log_auth)
 								{
-									debug("[WebAuth/%s] [Cookie] `%s`=`%s`", source, cookie.name, cookie.value);
+									// Use getter methods in libsoup3
+									debug("[WebAuth/%s] [Cookie] `%s`=`%s`", source, cookie.get_name(), cookie.get_value());
 								}
-								if(!is_finished && cookie.name == success_cookie_name && (success_url_prefix == null || uri.has_prefix(success_url_prefix)))
+								if(!is_finished && cookie.get_name() == success_cookie_name && (success_url_prefix == null || uri.has_prefix(success_url_prefix)))
 								{
 									is_finished = true;
-									var token = cookie.value;
+									var token = cookie.get_value();
 									if(GameHub.Application.log_auth)
 									{
 										debug("[WebAuth/%s] Finished with result `%s`", source, token);

@@ -220,7 +220,7 @@ else
 	deps += dependency('gtk+-3.0')
 endif
 
-webkit2gtk = dependency('webkit2gtk-4.0', required: false)
+webkit2gtk = dependency('webkit2gtk-4.1', required: false)
 if webkit2gtk.found()
 	add_global_arguments('-D', 'WEBKIT2GTK', language: 'vala')
 	deps += webkit2gtk

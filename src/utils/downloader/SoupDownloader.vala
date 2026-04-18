@@ -40,9 +40,11 @@ namespace GameHub.Utils.Downloader.SoupDownloader
 			downloads = new HashTable<string, SoupDownload>(str_hash, str_equal);
 			dl_info = new HashTable<string, DownloadInfo>(str_hash, str_equal);
 			dl_queue = new ArrayQueue<string>();
-			session = new Session();
-			session.max_conns = 32;
-			session.max_conns_per_host = 16;
+			session = new Session.with_options(
+				"max-conns", 32,
+				"max-conns-per-host", 16,
+				null
+			);
 		}
 
 		public override Download? get_download(string id)
@@ -158,10 +160,8 @@ namespace GameHub.Utils.Downloader.SoupDownloader
 		private async void download_from_http(SoupDownload download, bool preserve_filename=true, bool queue=true) throws Error
 		{
 			var msg = new Message("GET", download.remote.get_uri());
-			msg.response_body.set_accumulate(false);
-
-			download.session = session;
 			download.message = msg;
+			download.cancellable = new Cancellable();
 
 			if(queue)
 			{
@@ -174,14 +174,6 @@ namespace GameHub.Utils.Downloader.SoupDownloader
 				throw new IOError.CANCELLED("Download cancelled by user");
 			}
 
-			#if !PKG_FLATPAK
-			var address = msg.get_address();
-			var connectable = new NetworkAddress(address.name, (uint16) address.port);
-			var network_monitor = NetworkMonitor.get_default();
-			if(!(yield network_monitor.can_reach_async(connectable)))
-				throw new IOError.HOST_UNREACHABLE("Failed to reach host");
-			#endif
-
 			GLib.Error? err = null;
 
 			FileOutputStream? local_stream = null;
@@ -189,7 +181,6 @@ namespace GameHub.Utils.Downloader.SoupDownloader
 			int64 dl_bytes = 0;
 			int64 dl_bytes_total = 0;
 
-			#if SOUP_2_60
 			int64 resume_from = 0;
 			var resume_dl = false;
 
@@ -207,10 +198,10 @@ namespace GameHub.Utils.Downloader.SoupDownloader
 					}
 				}
 			}
-			#endif
 
 			msg.got_headers.connect(() => {
 				dl_bytes_total = msg.response_headers.get_content_length();
+				download.set_total_bytes(dl_bytes_total);
 				if(GameHub.Application.log_downloader)
 				{
 					debug(@"[SoupDownloader] Content-Length: $(dl_bytes_total)");
@@ -255,7 +246,7 @@ namespace GameHub.Utils.Downloader.SoupDownloader
 						var info = download.local.query_info(FileAttribute.STANDARD_SIZE, FileQueryInfoFlags.NONE);
 						if(info.get_size() == dl_bytes_total)
 						{
-							session.cancel_message(msg, Status.OK);
+							download.cancellable.cancel();
 							return;
 						}
 					}
@@ -264,7 +255,6 @@ namespace GameHub.Utils.Downloader.SoupDownloader
 						debug(@"[SoupDownloader] Downloading to '%s'", download.local.get_path());
 					}
 
-					#if SOUP_2_60
 					int64 rstart = -1, rend = -1;
 					if(resume_dl && msg.response_headers.get_content_range(out rstart, out rend, out dl_bytes_total))
 					{
@@ -277,7 +267,6 @@ namespace GameHub.Utils.Downloader.SoupDownloader
 						local_stream = download.local_tmp.append_to(FileCreateFlags.NONE);
 					}
 					else
-					#endif
 					{
 						local_stream = download.local_tmp.replace(null, false, FileCreateFlags.REPLACE_DESTINATION);
 					}
@@ -288,18 +277,30 @@ namespace GameHub.Utils.Downloader.SoupDownloader
 				}
 			});
 
-			int64 last_update = 0;
-			int64 dl_bytes_from_last_update = 0;
+			try
+			{
+				InputStream response_stream = yield session.send_async(msg, Priority.DEFAULT, download.cancellable);
 
-			msg.got_chunk.connect((msg, chunk) => {
-				if(session.would_redirect(msg) || local_stream == null) return;
+				if (download.is_cancelled)
+					throw new IOError.CANCELLED("Download cancelled by user");
 
-				dl_bytes += chunk.length;
-				dl_bytes_from_last_update += chunk.length;
-				try
+				uint8[] buffer = new uint8[8192];
+				ssize_t bytes_read;
+				int64 last_update = get_real_time();
+				int64 dl_bytes_from_last_update = 0;
+
+				while ((bytes_read = yield response_stream.read_async(buffer, Priority.DEFAULT, download.cancellable)) > 0)
 				{
-					local_stream.write(chunk.data);
-					chunk.free();
+					if (download.is_cancelled)
+						throw new IOError.CANCELLED("Download cancelled by user");
+
+					if (local_stream == null)
+						throw new IOError.CANCELLED("Stream closed unexpectedly");
+
+					size_t bytes_written;
+					yield local_stream.write_all_async(buffer[0:bytes_read], Priority.DEFAULT, download.cancellable, out bytes_written);
+					dl_bytes += bytes_read;
+					dl_bytes_from_last_update += bytes_read;
 
 					int64 now = get_real_time();
 					int64 diff = now - last_update;
@@ -311,35 +312,22 @@ namespace GameHub.Utils.Downloader.SoupDownloader
 						dl_bytes_from_last_update = 0;
 					}
 				}
-				catch(Error e)
-				{
-					err = e;
-					session.cancel_message(msg, Status.CANCELLED);
-				}
-			});
-
-			session.queue_message(msg, (session, msg) => {
-				download_from_http.callback();
-			});
-
-			yield;
-
-			if(local_stream == null) return;
-
-			yield local_stream.close_async(Priority.DEFAULT);
-
-			msg.request_body.free();
-			msg.response_body.free();
-
-			if(msg.status_code != Status.OK && msg.status_code != Status.PARTIAL_CONTENT)
+			}
+			catch(Error e)
 			{
-				if(msg.status_code == Status.CANCELLED)
-				{
+				err = e;
+			}
+
+			if(local_stream != null)
+				yield local_stream.close_async(Priority.DEFAULT);
+
+			if(msg.get_status() != Status.OK && msg.get_status() != Status.PARTIAL_CONTENT)
+			{
+				if(download.cancellable.is_cancelled() || (err is IOError.CANCELLED))
 					throw new IOError.CANCELLED("Download cancelled by user");
-				}
 
 				if(err == null)
-					err = new GLib.Error(http_error_quark(), (int) msg.status_code, msg.reason_phrase);
+					err = new GLib.Error(IOError.quark(), (int) msg.get_status(), msg.get_reason_phrase());
 
 				throw err;
 			}
@@ -430,36 +418,62 @@ namespace GameHub.Utils.Downloader.SoupDownloader
 	public class SoupDownload: FileDownload, PausableDownload
 	{
 		public weak Session? session;
-		public weak Message? message;
+		public Message? message;
+		public Cancellable? cancellable;
 		public bool is_cancelled = false;
+		private int64 paused_position = -1;
+		private int64 total_bytes = -1;   // store total download size
 
 		public SoupDownload(File remote, File local, File local_tmp)
 		{
 			base(remote, local, local_tmp);
 		}
 
+		public void set_total_bytes(int64 total)
+		{
+			total_bytes = total;
+		}
+
 		public void pause()
 		{
-			if(session != null && message != null && _status.state == Download.State.DOWNLOADING)
-			{
-				session.pause_message(message);
-				_status.state = Download.State.PAUSED;
+			if (cancellable != null && !cancellable.is_cancelled()) {
+				cancellable.cancel();
+				message = null;
+			}
+
+			try {
+				var file_info = local_tmp.query_info(FileAttribute.STANDARD_SIZE, FileQueryInfoFlags.NONE);
+				paused_position = file_info.get_size();
+				_status = new FileDownload.Status(Download.State.PAUSED, paused_position, total_bytes);
 				status_change(_status);
+				if (GameHub.Application.log_downloader)
+					debug(@"[SoupDownloader] Paused at $(paused_position) bytes");
+			} catch (Error e) {
+				warning("[SoupDownloader] Failed to get file size on pause: %s", e.message);
+				paused_position = -1;
 			}
 		}
+
 		public void resume()
 		{
-			if(session != null && message != null && _status.state == Download.State.PAUSED)
-			{
-				session.unpause_message(message);
+			if (paused_position > 0) {
+				if (GameHub.Application.log_downloader)
+					debug(@"[SoupDownloader] Resuming from $(paused_position) bytes");
+				_status = new FileDownload.Status(Download.State.STARTING, paused_position, total_bytes);
+				status_change(_status);
+				DownloadManager.get_instance().soup_downloader.download.begin(remote, local, null, true, true);
+				paused_position = -1;
+			} else {
+				warning("[SoupDownloader] Cannot resume: no valid paused position.");
 			}
 		}
+
 		public override void cancel()
 		{
 			is_cancelled = true;
-			if(session != null && message != null)
+			if(cancellable != null && !cancellable.is_cancelled())
 			{
-				session.cancel_message(message, Soup.Status.CANCELLED);
+				cancellable.cancel();
 			}
 		}
 	}

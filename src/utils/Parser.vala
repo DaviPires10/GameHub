@@ -46,10 +46,12 @@ namespace GameHub.Utils
 		{
 			if(session == null)
 			{
-				session = new Session();
-				session.timeout = 5;
-				session.max_conns = 256;
-				session.max_conns_per_host = 256;
+				session = new Session.with_options(
+					"max-conns", 256,
+					"max-conns-per-host", 256,
+					"timeout", 5,
+					null
+				);
 			}
 
 			var message = new Message(method, url);
@@ -74,7 +76,9 @@ namespace GameHub.Utils
 				{
 					multipart.append_form_string(v.key, v.value);
 				}
-				multipart.to_message(message.request_headers, message.request_body);
+				Bytes body_bytes;
+				multipart.to_message(message.request_headers, out body_bytes);
+				message.set_request_body_from_bytes(null, body_bytes);
 			}
 
 			return message;
@@ -83,9 +87,11 @@ namespace GameHub.Utils
 		public static string load_remote_file(string url, string method="GET", string? auth=null, HashMap<string, string>? headers=null, HashMap<string, string>? data=null, out uint status=null)
 		{
 			var message = prepare_message(url, method, auth, headers, data);
-
-			status = session.send_message(message);
-			return (string) message.response_body.data;
+			var response_body = session.send_and_read(message, null);
+			status = message.get_status();
+			if(response_body != null)
+				return (string) response_body.get_data();
+			return "";
 		}
 
 		public static async string load_remote_file_async(string url, string method="GET", string? auth=null, HashMap<string, string>? headers=null, HashMap<string, string>? data=null, out uint status=null)
@@ -94,12 +100,17 @@ namespace GameHub.Utils
 			var result = "";
 			var message = prepare_message(url, method, auth, headers, data);
 
-			session.queue_message(message, (s, m) => {
-				status_code = m.status_code;
-				result = (string) m.response_body.data;
-				load_remote_file_async.callback();
-			});
-			yield;
+			try
+			{
+				var response_body = yield session.send_and_read_async(message, Priority.DEFAULT, null);
+				status_code = message.get_status();
+				if(response_body != null)
+					result = (string) response_body.get_data();
+			}
+			catch(Error e)
+			{
+				warning("Soup send_async error: %s", e.message);
+			}
 			status = status_code;
 			return result;
 		}
